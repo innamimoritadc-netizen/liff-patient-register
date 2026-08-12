@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>予約リマインド登録 - 森田歯科</title>
+<script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN", sans-serif; background:#f7f7f7; margin:0; padding:24px 16px; }
+  .card { background:#fff; border-radius:12px; padding:24px 20px; max-width:420px; margin:0 auto; box-shadow:0 1px 4px rgba(0,0,0,0.08); }
+  h1 { font-size:18px; margin:0 0 8px; }
+  p.desc { font-size:14px; color:#555; margin:0 0 20px; }
+  label { display:block; font-size:14px; margin:16px 0 6px; color:#333; }
+  input { width:100%; box-sizing:border-box; padding:12px; font-size:16px; border:1px solid #ccc; border-radius:8px; }
+  button { width:100%; margin-top:24px; padding:14px; font-size:16px; font-weight:bold; color:#fff; background:#06c755; border:none; border-radius:8px; }
+  button:disabled { background:#aaa; }
+  #status { margin-top:16px; font-size:14px; text-align:center; }
+  #status.error { color:#c0392b; }
+  #status.ok { color:#06c755; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1>予約リマインド登録</h1>
+    <p class="desc">氏名と電話番号を入力してください。ご予約日の前にLINEでリマインドをお送りします。</p>
+    <form id="form">
+      <label for="patient_name">氏名（診察券のお名前と同じ表記）</label>
+      <input id="patient_name" name="patient_name" type="text" required placeholder="例）山田 太郎">
+      <label for="phone">電話番号（下4桁でも可）</label>
+      <input id="phone" name="phone" type="tel" required placeholder="例）1234 または 09012341234">
+      <button id="submitBtn" type="submit">登録する</button>
+    </form>
+    <div id="status"></div>
+  </div>
+
+<script>
+  const LIFF_ID = "2011083644-kkSVahKN";
+  const WEBHOOK_URL = "https://hook.us2.make.com/1oa76xdkoajwr7epx9petp7ulfx38xyi";
+
+  const statusEl = document.getElementById('status');
+  const btn = document.getElementById('submitBtn');
+
+  function setStatus(msg, cls) {
+    statusEl.textContent = msg;
+    statusEl.className = cls || '';
+  }
+
+  async function init() {
+    try {
+      await liff.init({ liffId: LIFF_ID });
+      if (!liff.isLoggedIn()) {
+        liff.login();
+        return;
+      }
+    } catch (e) {
+      setStatus('LIFFの初期化に失敗しました。LINEアプリ内でこのページを開いてください。', 'error');
+      btn.disabled = true;
+    }
+  }
+  init();
+
+  document.getElementById('form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    btn.disabled = true;
+    setStatus('送信中...');
+    try {
+      const profile = await liff.getProfile();
+      const patient_name = document.getElementById('patient_name').value.trim();
+      const phone = document.getElementById('phone').value.trim();
+
+      const res = await fetch(WEBHOOK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          line_user_id: profile.userId,
+          patient_name,
+          phone,
+          registered_at: new Date().toISOString()
+        })
+      });
+
+      if (!res.ok) throw new Error('送信失敗');
+      setStatus('登録が完了しました。このページは閉じて大丈夫です。', 'ok');
+      document.getElementById('form').style.display = 'none';
+    } catch (err) {
+      setStatus('エラーが発生しました。受付にお声がけください。', 'error');
+      btn.disabled = false;
+    }
+  });
+</script>
+</body>
+</html>
