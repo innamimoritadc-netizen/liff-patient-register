@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MIC予約スクショ取込 - 森田歯科</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN", sans-serif; background:#f7f7f7; margin:0; padding:24px 16px; }
+  .card { background:#fff; border-radius:12px; padding:24px 20px; max-width:420px; margin:0 auto; box-shadow:0 1px 4px rgba(0,0,0,0.08); }
+  h1 { font-size:18px; margin:0 0 8px; }
+  p.desc { font-size:14px; color:#555; margin:0 0 20px; }
+  input[type=file] { width:100%; box-sizing:border-box; padding:12px; font-size:15px; border:1px solid #ccc; border-radius:8px; }
+  button { width:100%; margin-top:20px; padding:14px; font-size:16px; font-weight:bold; color:#fff; background:#2b6cb0; border:none; border-radius:8px; }
+  button:disabled { background:#aaa; }
+  #status { margin-top:16px; font-size:14px; text-align:center; white-space:pre-wrap; }
+  #status.error { color:#c0392b; }
+  #status.ok { color:#2b6cb0; }
+  #preview { margin-top:16px; max-width:100%; border-radius:8px; display:none; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1>MIC予約スクリーンショット取込</h1>
+    <p class="desc">MICの予約管理画面のスクリーンショットを選択してアップロードしてください。氏名・予約日時を自動で読み取り、登録済みの患者にはLINEリマインドが届くようになります。</p>
+    <form id="form">
+      <input id="file" name="screenshot" type="file" accept="image/*" required>
+      <img id="preview">
+      <button id="submitBtn" type="submit">アップロードする</button>
+    </form>
+    <div id="status"></div>
+  </div>
+
+<script>
+  const WEBHOOK_URL = "https://hook.us2.make.com/m948ga6ptbpgzrkwtrfi8ycpbmovbzp8";
+  const fileInput = document.getElementById('file');
+  const preview = document.getElementById('preview');
+  const statusEl = document.getElementById('status');
+  const btn = document.getElementById('submitBtn');
+
+  fileInput.addEventListener('change', () => {
+    const f = fileInput.files[0];
+    if (f) {
+      preview.src = URL.createObjectURL(f);
+      preview.style.display = 'block';
+    }
+  });
+
+  function setStatus(msg, cls) {
+    statusEl.textContent = msg;
+    statusEl.className = cls || '';
+  }
+
+  document.getElementById('form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const f = fileInput.files[0];
+    if (!f) return;
+    btn.disabled = true;
+    setStatus('アップロード中...少々お待ちください');
+    try {
+      const formData = new FormData();
+      formData.append('screenshot', f, f.name);
+
+      const res = await fetch(WEBHOOK_URL, {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!res.ok) throw new Error('送信失敗');
+      setStatus('送信しました。読み取り処理には数十秒〜数分かかります。', 'ok');
+      document.getElementById('form').reset();
+      preview.style.display = 'none';
+    } catch (err) {
+      setStatus('エラーが発生しました。もう一度お試しください。', 'error');
+    } finally {
+      btn.disabled = false;
+    }
+  });
+</script>
+</body>
+</html>
