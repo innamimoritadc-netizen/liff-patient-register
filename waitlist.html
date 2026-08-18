@@ -26,8 +26,8 @@
     <form id="form">
       <label for="patient_name">氏名（診察券のお名前と同じ表記）</label>
       <input id="patient_name" name="patient_name" type="text" required placeholder="例）山田 太郎">
-      <label for="desired_week">キャンセル待ちを希望する週</label>
-      <input id="desired_week" name="desired_week" type="week" required>
+      <label for="desired_date">キャンセル待ちを希望する日</label>
+      <input id="desired_date" name="desired_date" type="date" required>
       <button id="submitBtn" type="submit">登録する</button>
     </form>
     <div id="status"></div>
@@ -66,7 +66,7 @@
     try {
       const profile = await liff.getProfile();
       const patient_name = document.getElementById('patient_name').value.trim();
-      const desired_week = document.getElementById('desired_week').value;
+      const desired_date = document.getElementById('desired_date').value;
 
       const res = await fetch(WEBHOOK_URL, {
         method: 'POST',
@@ -74,7 +74,7 @@
         body: JSON.stringify({
           line_user_id: profile.userId,
           patient_name,
-          desired_week,
+          desired_date,
           registered_at: new Date().toISOString()
         })
       });
