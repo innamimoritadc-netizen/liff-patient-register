@@ -22,12 +22,12 @@
 <body>
   <div class="card">
     <h1>予約リマインド登録</h1>
-    <p class="desc">氏名と電話番号を入力してください。ご予約日の前にLINEでリマインドをお送りします。</p>
+    <p class="desc">氏名と電話番号を入力してください。ご予約日の前にLINEでリマインドをお送りします。<br><br>登録が完了すると自動的に「友だち追加」もされます。お子様など、ご家族分をまとめて登録したい場合は、1人登録するごとにこの画面をもう一度開いて、続けて登録してください。</p>
     <form id="form">
       <label for="patient_name">氏名（診察券のお名前と同じ表記）</label>
       <input id="patient_name" name="patient_name" type="text" required placeholder="例）山田 太郎">
-      <label for="phone">電話番号（下4桁でも可）</label>
-      <input id="phone" name="phone" type="tel" required placeholder="例）1234 または 09012341234">
+      <label for="phone">電話番号</label>
+      <input id="phone" name="phone" type="tel" required placeholder="例）09012341234">
       <button id="submitBtn" type="submit">登録する</button>
     </form>
     <div id="status"></div>
