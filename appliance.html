@@ -178,8 +178,12 @@ async function init(){
 }
 
 function renderTabs(){
+  if(patients.length <= 1){
+    patientNameArea.textContent = patients[0].patient_name + ' さんの記録';
+    patientTabs.hidden = true;
+    return;
+  }
   patientNameArea.textContent = '記録するお子様を選んでください';
-  if(patients.length <= 1){ patientTabs.hidden = true; return; }
   patientTabs.hidden = false;
   patientTabs.innerHTML = patients.map((p,i) =>
     '<button class="patient-tab'+(i===currentIndex?' selected':'')+'" data-index="'+i+'">'+p.patient_name+'</button>'
