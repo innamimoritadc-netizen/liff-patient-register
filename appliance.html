@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>装着時間記録</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#f6f8f7;
+  --surface:#ffffff;
+  --surface-2:#eef3f1;
+  --text:#1e2b28;
+  --text-muted:#5f7169;
+  --border:#dde6e2;
+  --accent:#2e8b7c;
+  --accent-strong:#1f6358;
+  --active:#e2933a;
+  --active-soft:#fbeedb;
+  --shadow: 0 1px 2px rgba(30,43,40,0.04), 0 8px 24px rgba(30,43,40,0.06);
+}
+*{box-sizing:border-box;}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font-family:"Noto Sans JP","Hiragino Sans",sans-serif;
+  min-height:100vh;
+  display:flex;
+  justify-content:center;
+}
+.screen{
+  width:100%;
+  max-width:420px;
+  min-height:100vh;
+  background:var(--bg);
+  display:flex;
+  flex-direction:column;
+}
+header{ padding:22px 20px 14px; border-bottom:1px solid var(--border); }
+.clinic{ font-size:12px; letter-spacing:.08em; color:var(--text-muted); font-weight:500; }
+h1{ font-family:"Zen Kaku Gothic New",sans-serif; font-weight:900; font-size:22px; margin:4px 0 0; letter-spacing:.02em; }
+.patient-name{ margin-top:6px; font-size:13px; color:var(--text-muted); }
+.patient-tabs{ display:flex; gap:8px; margin-top:14px; overflow-x:auto; }
+.patient-tab{
+  flex:0 0 auto; padding:9px 16px; border-radius:999px; border:1px solid var(--border);
+  background:var(--surface); color:var(--text-muted); font-size:13px; font-weight:700;
+  font-family:"Zen Kaku Gothic New",sans-serif; cursor:pointer;
+}
+.patient-tab.selected{ background:var(--accent); border-color:var(--accent); color:#fff; }
+main{ flex:1; padding:24px 20px 20px; display:flex; flex-direction:column; gap:18px; }
+.status-msg{ text-align:center; color:var(--text-muted); font-size:14px; padding:40px 20px; }
+.entry-card{
+  background:var(--surface); border:1px solid var(--border); border-radius:20px;
+  box-shadow:var(--shadow); padding:22px 22px 24px; display:flex; flex-direction:column; gap:14px;
+}
+.entry-card h2{ font-family:"Zen Kaku Gothic New",sans-serif; font-size:15px; font-weight:700; margin:0; }
+.entry-row{ display:flex; align-items:center; gap:10px; }
+.entry-field{ flex:1; display:flex; flex-direction:column; gap:6px; }
+.entry-field label{ font-size:11px; color:var(--text-muted); font-weight:500; }
+.entry-field input[type="time"]{
+  width:100%; border:1px solid var(--border); border-radius:12px; padding:11px 12px;
+  font-size:16px; font-family:"Zen Kaku Gothic New",sans-serif; font-variant-numeric:tabular-nums;
+  background:var(--surface-2); color:var(--text);
+}
+.entry-arrow{ color:var(--text-muted); font-size:15px; margin-top:16px; }
+.add-btn{
+  width:100%; border:none; border-radius:14px; padding:15px; font-size:16px; font-weight:700;
+  font-family:"Zen Kaku Gothic New",sans-serif; letter-spacing:.03em; cursor:pointer;
+  background:var(--accent); color:#fff; transition:transform .12s ease, opacity .12s ease;
+}
+.add-btn:active{ transform:scale(0.98); }
+.add-btn:disabled{ opacity:.6; }
+.entry-hint{ font-size:11.5px; color:var(--text-muted); margin-top:-4px; }
+.today-card{
+  background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:18px 20px;
+  display:flex; flex-direction:column; gap:12px; box-shadow:var(--shadow);
+}
+.today-card-top{ display:flex; align-items:baseline; justify-content:space-between; }
+.today-card .label{ font-size:13px; color:var(--text-muted); font-weight:500; }
+.today-card .value{
+  font-family:"Zen Kaku Gothic New",sans-serif; font-weight:900; font-size:26px;
+  color:var(--accent-strong); font-variant-numeric:tabular-nums;
+}
+.today-card .value span{ font-size:14px; font-weight:700; margin-left:2px; color:var(--text-muted); }
+.progress-track{ position:relative; width:100%; height:8px; border-radius:999px; background:var(--surface-2); }
+.progress-fill{ height:100%; border-radius:999px; background:var(--active); transition:width .3s ease, background .3s ease; }
+.min-tick{ position:absolute; top:-3px; width:2px; height:14px; background:var(--text-muted); border-radius:1px; opacity:.5; }
+.scale-row{ position:relative; height:14px; font-size:11px; color:var(--text-muted); font-variant-numeric:tabular-nums; }
+.scale-row span{ position:absolute; transform:translateX(-50%); white-space:nowrap; }
+.scale-row span:nth-child(1){ left:50%; }
+.scale-row span:nth-child(2){ left:70%; }
+.scale-row span:nth-child(3){ left:100%; font-weight:700; color:var(--accent-strong); }
+.goal-badge{ font-size:13px; font-weight:700; text-align:center; }
+.goal-badge.excellent{ color:var(--accent-strong); }
+.goal-badge.min{ color:var(--accent); }
+.goal-badge.under{ color:var(--active); }
+.section-title{ font-size:12px; font-weight:700; letter-spacing:.06em; color:var(--text-muted); margin:4px 2px 0; }
+.history{ background:var(--surface); border:1px solid var(--border); border-radius:16px; overflow:hidden; box-shadow:var(--shadow); }
+.history-row{ display:flex; justify-content:space-between; align-items:center; padding:13px 18px; border-bottom:1px solid var(--border); font-size:14px; gap:10px; }
+.history-row:last-child{ border-bottom:none; }
+.history-row .time-range{ color:var(--text); font-variant-numeric:tabular-nums; flex:1; }
+.history-row .duration{ font-weight:700; color:var(--text); font-variant-numeric:tabular-nums; }
+.history-row .del-btn{ border:none; background:none; color:var(--text-muted); font-size:16px; cursor:pointer; padding:2px 4px; line-height:1; }
+.history-empty{ padding:16px 18px; font-size:13px; color:var(--text-muted); }
+.hint{ font-size:12px; color:var(--text-muted); text-align:center; line-height:1.6; padding:0 12px; }
+</style>
+</head>
+<body>
+<div class="screen">
+  <header>
+    <div class="clinic">森田歯科 矯正治療サポート</div>
+    <h1>装着時間記録</h1>
+    <div class="patient-name" id="patientNameArea">読み込み中です…</div>
+    <div class="patient-tabs" id="patientTabs" hidden></div>
+  </header>
+
+  <main id="mainArea">
+    <div class="status-msg" id="statusMsg">少々お待ちください…</div>
+  </main>
+</div>
+
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script>
+const LIFF_ID = "REPLACE_WITH_YOUR_LIFF_ID";
+const PATIENTS_API = "https://hook.us2.make.com/3eccv7nyhybzqrnaojpa193gsw47utpw";
+const RECORD_API = "https://hook.us2.make.com/c8pqg4lbihxwb1qa2fq0z6yi1cy874p1";
+
+const MIN_GOAL_MIN = 10*60, MID_GOAL_MIN = 14*60, TOP_GOAL_MIN = 20*60;
+
+const mainArea = document.getElementById('mainArea');
+const statusMsg = document.getElementById('statusMsg');
+const patientNameArea = document.getElementById('patientNameArea');
+const patientTabs = document.getElementById('patientTabs');
+
+let lineUserId = null;
+let patients = [];           // [{patient_name}]
+let currentIndex = 0;
+let entriesByPatient = {};   // patient_name -> [{start,end}]
+
+function todayStr(){
+  const d = new Date();
+  const p = n => String(n).padStart(2,'0');
+  return d.getFullYear() + '-' + p(d.getMonth()+1) + '-' + p(d.getDate());
+}
+function toMinutes(hhmm){ const [h,m] = hhmm.split(':').map(Number); return h*60+m; }
+function durationOf(e){ let s=toMinutes(e.start), en=toMinutes(e.end); if(en<=s) en+=24*60; return en-s; }
+function fmtDur(min){ return Math.floor(min/60) + '時間' + (min%60) + '分'; }
+
+async function init(){
+  try{
+    await liff.init({ liffId: LIFF_ID });
+    if(!liff.isLoggedIn()){ liff.login(); return; }
+    const profile = await liff.getProfile();
+    lineUserId = profile.userId;
+
+    const res = await fetch(PATIENTS_API, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ line_user_id: lineUserId })
+    });
+    const data = await res.json();
+    patients = (data.patients || []).filter(p => p.patient_name);
+
+    if(patients.length === 0){
+      patientNameArea.textContent = '';
+      mainArea.innerHTML = '<div class="status-msg">お子様の登録が見つかりませんでした。受付にご確認ください。</div>';
+      return;
+    }
+
+    patients.forEach(p => { entriesByPatient[p.patient_name] = []; });
+    renderTabs();
+    renderMain();
+  } catch(err){
+    mainArea.innerHTML = '<div class="status-msg">読み込みに失敗しました。時間をおいて再度お試しください。</div>';
+    console.error(err);
+  }
+}
+
+function renderTabs(){
+  patientNameArea.textContent = '記録するお子様を選んでください';
+  if(patients.length <= 1){ patientTabs.hidden = true; return; }
+  patientTabs.hidden = false;
+  patientTabs.innerHTML = patients.map((p,i) =>
+    '<button class="patient-tab'+(i===currentIndex?' selected':'')+'" data-index="'+i+'">'+p.patient_name+'</button>'
+  ).join('');
+  patientTabs.querySelectorAll('.patient-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      currentIndex = Number(btn.dataset.index);
+      renderTabs();
+      renderMain();
+    });
+  });
+}
+
+function renderMain(){
+  const name = patients[currentIndex].patient_name;
+  const entries = entriesByPatient[name];
+  const todayMin = entries.reduce((sum,e) => sum + durationOf(e), 0);
+  const hours = Math.floor(todayMin/60), mins = todayMin%60;
+  const pct = Math.min(100, (todayMin/TOP_GOAL_MIN)*100);
+
+  let barColor = 'var(--active)', badgeClass = 'under', badgeText;
+  if(todayMin >= TOP_GOAL_MIN){ barColor='var(--accent-strong)'; badgeClass='excellent'; badgeText='素晴らしい！20時間を達成しました'; }
+  else if(todayMin >= MID_GOAL_MIN){ barColor='var(--accent-strong)'; badgeClass='min'; badgeText='中間目標14時間を達成しています'; }
+  else if(todayMin >= MIN_GOAL_MIN){ barColor='var(--accent)'; badgeClass='min'; badgeText='最低目標を達成しています'; }
+  else { badgeText = '最低目標まであと ' + fmtDur(MIN_GOAL_MIN - todayMin); }
+
+  const rows = entries.length === 0
+    ? '<div class="history-empty">まだ今日の記録はありません</div>'
+    : entries.map((e,i) =>
+        '<div class="history-row"><span class="time-range">'+e.start+'〜'+e.end+'</span><span class="duration">'+fmtDur(durationOf(e))+'</span>'
+        +'<button class="del-btn" data-index="'+i+'" title="削除">✕</button></div>'
+      ).join('');
+
+  mainArea.innerHTML = `
+    <div class="entry-card">
+      <h2>今日の装着時間を記録</h2>
+      <div class="entry-row">
+        <div class="entry-field"><label for="startTime">開始時刻</label><input type="time" id="startTime" value="21:00"></div>
+        <div class="entry-arrow">→</div>
+        <div class="entry-field"><label for="endTime">終了時刻</label><input type="time" id="endTime" value="07:00"></div>
+      </div>
+      <div class="entry-hint">終了時刻が開始時刻より前の場合、翌日として計算します</div>
+      <button class="add-btn" id="addBtn">この記録を追加する</button>
+    </div>
+    <div class="today-card">
+      <div class="today-card-top">
+        <div class="label">本日の合計装着時間</div>
+        <div class="value">${hours}<span>時間${mins}分</span></div>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" style="width:${pct}%;background:${barColor}"></div>
+        <div class="min-tick" style="left:50%"></div>
+        <div class="min-tick" style="left:70%"></div>
+      </div>
+      <div class="scale-row"><span>最低10h</span><span>中間14h</span><span>20hで素晴らしい！</span></div>
+      <div class="goal-badge ${badgeClass}">${badgeText}</div>
+    </div>
+    <div class="section-title">今日の記録</div>
+    <div class="history">${rows}</div>
+    <div class="hint">装着していた時間帯を入力して「記録を追加する」を押してください。1日に何回でも追加でき、合計時間は自動で計算されます。</div>
+  `;
+
+  document.getElementById('addBtn').addEventListener('click', onAdd);
+  mainArea.querySelectorAll('.del-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      entries.splice(Number(btn.dataset.index), 1);
+      renderMain();
+      submitTotal(name, entries);
+    });
+  });
+}
+
+async function onAdd(){
+  const start = document.getElementById('startTime').value;
+  const end = document.getElementById('endTime').value;
+  if(!start || !end) return;
+  const name = patients[currentIndex].patient_name;
+  const entries = entriesByPatient[name];
+  entries.push({ start, end });
+  renderMain();
+  await submitTotal(name, entries);
+}
+
+async function submitTotal(patientName, entries){
+  const totalMinutes = entries.reduce((sum,e) => sum + durationOf(e), 0);
+  try{
+    await fetch(RECORD_API, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        line_user_id: lineUserId,
+        patient_name: patientName,
+        date: todayStr(),
+        total_minutes: totalMinutes
+      })
+    });
+  } catch(err){ console.error(err); }
+}
+
+init();
+</script>
+</body>
+</html>
