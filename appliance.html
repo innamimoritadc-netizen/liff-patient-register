@@ -136,7 +136,8 @@ const patientTabs = document.getElementById('patientTabs');
 let lineUserId = null;
 let patients = [];           // [{patient_name}]
 let currentIndex = 0;
-let entriesByPatient = {};   // patient_name -> [{start,end}]
+let entriesByPatient = {};   // patient_name -> [{start,end}] (added this session)
+let baseMinutesByPatient = {}; // patient_name -> minutes already recorded today (from previous sessions)
 
 function todayStr(){
   const d = new Date();
@@ -168,6 +169,12 @@ async function init(){
       return;
     }
 
+    const today = todayStr();
+    (data.today_totals || []).forEach(row => {
+      if(row.date === today && row.patient_name){
+        baseMinutesByPatient[row.patient_name] = Number(row.total_minutes) || 0;
+      }
+    });
     patients.forEach(p => { entriesByPatient[p.patient_name] = []; });
     renderTabs();
     renderMain();
@@ -200,7 +207,8 @@ function renderTabs(){
 function renderMain(){
   const name = patients[currentIndex].patient_name;
   const entries = entriesByPatient[name];
-  const todayMin = entries.reduce((sum,e) => sum + durationOf(e), 0);
+  const baseMin = baseMinutesByPatient[name] || 0;
+  const todayMin = baseMin + entries.reduce((sum,e) => sum + durationOf(e), 0);
   const hours = Math.floor(todayMin/60), mins = todayMin%60;
   const pct = Math.min(100, (todayMin/TOP_GOAL_MIN)*100);
 
@@ -210,9 +218,12 @@ function renderMain(){
   else if(todayMin >= MIN_GOAL_MIN){ barColor='var(--accent)'; badgeClass='min'; badgeText='最低目標を達成しています'; }
   else { badgeText = '最低目標まであと ' + fmtDur(MIN_GOAL_MIN - todayMin); }
 
-  const rows = entries.length === 0
+  const baseRow = baseMin > 0
+    ? '<div class="history-row"><span class="time-range">これまでの記録</span><span class="duration">'+fmtDur(baseMin)+'</span></div>'
+    : '';
+  const rows = (baseRow === '' && entries.length === 0)
     ? '<div class="history-empty">まだ今日の記録はありません</div>'
-    : entries.map((e,i) =>
+    : baseRow + entries.map((e,i) =>
         '<div class="history-row"><span class="time-range">'+e.start+'〜'+e.end+'</span><span class="duration">'+fmtDur(durationOf(e))+'</span>'
         +'<button class="del-btn" data-index="'+i+'" title="削除">✕</button></div>'
       ).join('');
@@ -251,7 +262,7 @@ function renderMain(){
     btn.addEventListener('click', () => {
       entries.splice(Number(btn.dataset.index), 1);
       renderMain();
-      submitTotal(name, entries);
+      submitTotal(name);
     });
   });
 }
@@ -261,14 +272,14 @@ async function onAdd(){
   const end = document.getElementById('endTime').value;
   if(!start || !end) return;
   const name = patients[currentIndex].patient_name;
-  const entries = entriesByPatient[name];
-  entries.push({ start, end });
+  entriesByPatient[name].push({ start, end });
   renderMain();
-  await submitTotal(name, entries);
+  await submitTotal(name);
 }
 
-async function submitTotal(patientName, entries){
-  const totalMinutes = entries.reduce((sum,e) => sum + durationOf(e), 0);
+async function submitTotal(patientName){
+  const baseMin = baseMinutesByPatient[patientName] || 0;
+  const totalMinutes = baseMin + entriesByPatient[patientName].reduce((sum,e) => sum + durationOf(e), 0);
   try{
     await fetch(RECORD_API, {
       method: 'POST',
