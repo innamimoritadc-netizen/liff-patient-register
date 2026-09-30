@@ -104,13 +104,23 @@ main{ flex:1; padding:24px 20px 20px; display:flex; flex-direction:column; gap:1
 .history-row .del-btn{ border:none; background:none; color:var(--text-muted); font-size:16px; cursor:pointer; padding:2px 4px; line-height:1; }
 .history-empty{ padding:16px 18px; font-size:13px; color:var(--text-muted); }
 .hint{ font-size:12px; color:var(--text-muted); text-align:center; line-height:1.6; padding:0 12px; }
+.appliance-note{ font-size:12.5px; color:var(--text-muted); background:var(--surface-2); border-radius:12px; padding:10px 14px; line-height:1.6; }
+.appliance-note b{ color:var(--text); }
+.turn-row{ display:flex; gap:10px; }
+.turn-btn{ flex:1; }
+.minus-btn{
+  flex:0 0 88px; border:1px solid var(--border); border-radius:14px; padding:15px 8px; font-size:15px; font-weight:700;
+  font-family:"Zen Kaku Gothic New",sans-serif; background:var(--surface); color:var(--text-muted); cursor:pointer;
+}
+.minus-btn:disabled{ opacity:.5; }
+.done-msg{ font-size:13px; font-weight:700; color:var(--active); text-align:center; line-height:1.6; }
 </style>
 </head>
 <body>
 <div class="screen">
   <header>
     <div class="clinic">森田歯科 矯正治療サポート</div>
-    <h1>装着時間記録</h1>
+    <h1 id="titleArea">装着時間記録</h1>
     <div class="patient-name" id="patientNameArea">読み込み中です…</div>
     <div class="patient-tabs" id="patientTabs" hidden></div>
   </header>
@@ -126,10 +136,11 @@ const LIFF_ID = "2011083644-i81xSjpU";
 const PATIENTS_API = "https://hook.us2.make.com/3eccv7nyhybzqrnaojpa193gsw47utpw";
 const RECORD_API = "https://hook.us2.make.com/c8pqg4lbihxwb1qa2fq0z6yi1cy874p1";
 
-const MIN_GOAL_MIN = 10*60, MID_GOAL_MIN = 14*60, TOP_GOAL_MIN = 20*60;
+// 医院で装置が設定されていない時の目標(分)
+const DEFAULT_GOALS = { min: 10*60, mid: 14*60, top: 20*60 };
 
 const mainArea = document.getElementById('mainArea');
-const statusMsg = document.getElementById('statusMsg');
+const titleArea = document.getElementById('titleArea');
 const patientNameArea = document.getElementById('patientNameArea');
 const patientTabs = document.getElementById('patientTabs');
 
@@ -138,6 +149,10 @@ let patients = [];           // [{patient_name}]
 let currentIndex = 0;
 let entriesByPatient = {};   // patient_name -> [{start,end}] (added this session)
 let baseMinutesByPatient = {}; // patient_name -> minutes already recorded today (from previous sessions)
+let settingsByPatient = {};  // patient_name -> 医院で決めた装置と目標
+let turnsTodayByPatient = {}; // patient_name -> 今日ネジを回した回数
+let turnsBeforeByPatient = {}; // patient_name -> 回し始めの日から昨日までの合計回数
+let rowsByPatient = {};      // patient_name -> 過去の記録 [{date, turns}]
 
 function todayStr(){
   const d = new Date();
@@ -147,6 +162,25 @@ function todayStr(){
 function toMinutes(hhmm){ const [h,m] = hhmm.split(':').map(Number); return h*60+m; }
 function durationOf(e){ let s=toMinutes(e.start), en=toMinutes(e.end); if(en<=s) en+=24*60; return en-s; }
 function fmtDur(min){ return Math.floor(min/60) + '時間' + (min%60) + '分'; }
+function fmtHours(min){ const h=Math.floor(min/60), m=min%60; return m ? h+'時間'+m+'分' : h+'時間'; }
+function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function num(x){ const n = Number(x); return isFinite(n) && x !== null && x !== '' ? n : null; }
+
+function settingOf(name){
+  const s = settingsByPatient[name] || {};
+  const mode = s.mode === 'turns' ? 'turns' : 'time';
+  const min = num(s.min_minutes) || DEFAULT_GOALS.min;
+  const mid = Math.max(min, num(s.mid_minutes) || (s.min_minutes ? min : DEFAULT_GOALS.mid));
+  const top = Math.max(mid, num(s.top_minutes) || (s.min_minutes ? mid : DEFAULT_GOALS.top));
+  return {
+    mode, min, mid, top,
+    label: s.appliance_label || '',
+    hint: s.hint || '',
+    perDay: num(s.turns_per_day) || 1,
+    total: num(s.turns_total) || 0,
+    start: s.turn_start_date || ''
+  };
+}
 
 async function init(){
   try{
@@ -169,13 +203,25 @@ async function init(){
       return;
     }
 
+    (data.settings || []).forEach(s => { if(s && s.patient_name) settingsByPatient[s.patient_name] = s; });
+
     const today = todayStr();
     (data.today_totals || []).forEach(row => {
-      if(row.date === today && row.patient_name){
+      if(!row || !row.patient_name) return;
+      (rowsByPatient[row.patient_name] = rowsByPatient[row.patient_name] || []).push(row);
+      if(row.date === today){
         baseMinutesByPatient[row.patient_name] = Number(row.total_minutes) || 0;
+        turnsTodayByPatient[row.patient_name] = Number(row.turns) || 0;
       }
     });
-    patients.forEach(p => { entriesByPatient[p.patient_name] = []; });
+    patients.forEach(p => {
+      const name = p.patient_name;
+      entriesByPatient[name] = [];
+      const st = settingOf(name);
+      turnsBeforeByPatient[name] = (rowsByPatient[name] || [])
+        .filter(r => r.date < today && (!st.start || r.date >= st.start))
+        .reduce((sum, r) => sum + (Number(r.turns) || 0), 0);
+    });
     renderTabs();
     renderMain();
   } catch(err){
@@ -193,7 +239,7 @@ function renderTabs(){
   patientNameArea.textContent = '記録するお子様を選んでください';
   patientTabs.hidden = false;
   patientTabs.innerHTML = patients.map((p,i) =>
-    '<button class="patient-tab'+(i===currentIndex?' selected':'')+'" data-index="'+i+'">'+p.patient_name+'</button>'
+    '<button class="patient-tab'+(i===currentIndex?' selected':'')+'" data-index="'+i+'">'+esc(p.patient_name)+'</button>'
   ).join('');
   patientTabs.querySelectorAll('.patient-tab').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -204,19 +250,34 @@ function renderTabs(){
   });
 }
 
+function applianceNote(st){
+  if(!st.label && !st.hint) return '';
+  return '<div class="appliance-note">'
+    + (st.label ? '装置：<b>' + esc(st.label) + '</b>' : '')
+    + (st.label && st.hint ? '<br>' : '')
+    + (st.hint ? esc(st.hint) : '')
+    + '</div>';
+}
+
 function renderMain(){
   const name = patients[currentIndex].patient_name;
+  const st = settingOf(name);
+  if(st.mode === 'turns') return renderTurns(name, st);
+  titleArea.textContent = '装着時間記録';
+
   const entries = entriesByPatient[name];
   const baseMin = baseMinutesByPatient[name] || 0;
   const todayMin = baseMin + entries.reduce((sum,e) => sum + durationOf(e), 0);
   const hours = Math.floor(todayMin/60), mins = todayMin%60;
-  const pct = Math.min(100, (todayMin/TOP_GOAL_MIN)*100);
+  const pct = Math.min(100, (todayMin/st.top)*100);
+  const minPos = st.min/st.top*100, midPos = st.mid/st.top*100;
+  const showMid = st.mid > st.min && st.mid < st.top;
 
   let barColor = 'var(--active)', badgeClass = 'under', badgeText;
-  if(todayMin >= TOP_GOAL_MIN){ barColor='var(--accent-strong)'; badgeClass='excellent'; badgeText='素晴らしい！20時間を達成しました'; }
-  else if(todayMin >= MID_GOAL_MIN){ barColor='var(--accent-strong)'; badgeClass='min'; badgeText='中間目標14時間を達成しています'; }
-  else if(todayMin >= MIN_GOAL_MIN){ barColor='var(--accent)'; badgeClass='min'; badgeText='最低目標を達成しています'; }
-  else { badgeText = '最低目標まであと ' + fmtDur(MIN_GOAL_MIN - todayMin); }
+  if(todayMin >= st.top){ barColor='var(--accent-strong)'; badgeClass='excellent'; badgeText='素晴らしい！'+fmtHours(st.top)+'を達成しました'; }
+  else if(showMid && todayMin >= st.mid){ barColor='var(--accent-strong)'; badgeClass='min'; badgeText='中間目標'+fmtHours(st.mid)+'を達成しています'; }
+  else if(todayMin >= st.min){ barColor='var(--accent)'; badgeClass='min'; badgeText='最低目標を達成しています'; }
+  else { badgeText = '最低目標まであと ' + fmtDur(st.min - todayMin); }
 
   const baseRow = baseMin > 0
     ? '<div class="history-row"><span class="time-range">これまでの記録</span><span class="duration">'+fmtDur(baseMin)+'</span></div>'
@@ -229,6 +290,7 @@ function renderMain(){
       ).join('');
 
   mainArea.innerHTML = `
+    ${applianceNote(st)}
     <div class="entry-card">
       <h2>今日の装着時間を記録</h2>
       <div class="entry-row">
@@ -246,10 +308,14 @@ function renderMain(){
       </div>
       <div class="progress-track">
         <div class="progress-fill" style="width:${pct}%;background:${barColor}"></div>
-        <div class="min-tick" style="left:50%"></div>
-        <div class="min-tick" style="left:70%"></div>
+        <div class="min-tick" style="left:${minPos}%"></div>
+        ${showMid ? `<div class="min-tick" style="left:${midPos}%"></div>` : ''}
       </div>
-      <div class="scale-row"><span>最低10h</span><span>中間14h</span><span>20hで素晴らしい！</span></div>
+      <div class="scale-row">
+        <span style="left:${minPos}%">最低${fmtHours(st.min)}</span>
+        ${showMid ? `<span style="left:${midPos}%">中間${fmtHours(st.mid)}</span>` : '<span></span>'}
+        ${st.top > st.min ? `<span style="left:100%">${fmtHours(st.top)}で素晴らしい！</span>` : '<span></span>'}
+      </div>
       <div class="goal-badge ${badgeClass}">${badgeText}</div>
     </div>
     <div class="section-title">今日の記録</div>
@@ -264,6 +330,58 @@ function renderMain(){
       renderMain();
       submitTotal(name);
     });
+  });
+}
+
+// 急速拡大装置: ネジを回した回数を記録する
+function renderTurns(name, st){
+  titleArea.textContent = 'ネジを回した回数の記録';
+  const today = turnsTodayByPatient[name] || 0;
+  const sum = (turnsBeforeByPatient[name] || 0) + today;
+  const reached = st.total > 0 && sum >= st.total;
+  const pct = st.total > 0 ? Math.min(100, sum/st.total*100) : 0;
+
+  let badgeClass = 'under', badgeText;
+  if(today >= st.perDay){ badgeClass = 'excellent'; badgeText = '今日の分は回しました'; }
+  else { badgeText = '今日はあと ' + (st.perDay - today) + '回'; }
+
+  mainArea.innerHTML = `
+    ${applianceNote(st)}
+    <div class="entry-card">
+      <h2>ネジを回したら押してください（1日${st.perDay}回）</h2>
+      <div class="turn-row">
+        <button class="minus-btn" id="minusBtn" ${today <= 0 ? 'disabled' : ''}>−1 取消</button>
+        <button class="add-btn turn-btn" id="plusBtn" ${reached ? 'disabled' : ''}>1回 回した</button>
+      </div>
+      ${reached ? '<div class="done-msg">予定の回数に達しました。これ以上は回さず、次の来院をお待ちください。</div>' : ''}
+    </div>
+    <div class="today-card">
+      <div class="today-card-top">
+        <div class="label">今日回した回数</div>
+        <div class="value">${today}<span>回</span></div>
+      </div>
+      <div class="goal-badge ${badgeClass}">${badgeText}</div>
+    </div>
+    ${st.total > 0 || sum > 0 ? `
+    <div class="today-card">
+      <div class="today-card-top">
+        <div class="label">これまでの合計${st.start ? '（' + Number(st.start.slice(5,7)) + '/' + Number(st.start.slice(8,10)) + 'から）' : ''}</div>
+        <div class="value">${sum}<span>回${st.total > 0 ? ' / 予定' + st.total + '回' : ''}</span></div>
+      </div>
+      ${st.total > 0 ? `<div class="progress-track"><div class="progress-fill" style="width:${pct}%;background:var(--accent)"></div></div>` : ''}
+    </div>` : ''}
+    <div class="hint">回し忘れや回し過ぎがあった時は、そのまま記録して来院時にお伝えください。間違えて押した時は「−1 取消」を押してください。</div>
+  `;
+
+  document.getElementById('plusBtn').addEventListener('click', () => {
+    turnsTodayByPatient[name] = today + 1;
+    renderMain();
+    submitTurns(name);
+  });
+  document.getElementById('minusBtn').addEventListener('click', () => {
+    turnsTodayByPatient[name] = Math.max(0, today - 1);
+    renderMain();
+    submitTurns(name);
   });
 }
 
@@ -288,7 +406,24 @@ async function submitTotal(patientName){
         line_user_id: lineUserId,
         patient_name: patientName,
         date: todayStr(),
-        total_minutes: totalMinutes
+        total_minutes: totalMinutes,
+        kind: 'time'
+      })
+    });
+  } catch(err){ console.error(err); }
+}
+
+async function submitTurns(patientName){
+  try{
+    await fetch(RECORD_API, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        line_user_id: lineUserId,
+        patient_name: patientName,
+        date: todayStr(),
+        turns: turnsTodayByPatient[patientName] || 0,
+        kind: 'turns'
       })
     });
   } catch(err){ console.error(err); }
