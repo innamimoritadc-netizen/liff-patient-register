@@ -240,11 +240,27 @@
     btn.disabled = true;
     setStatus('送信しています…');
     const one = s => String(s).replace(/[\r\n]+/g, ' ').trim();
+    // MICの予約表では初診の方は半角カタカナの名前で入るので、リマインドの照合用に ふりがな を半角カタカナ(空白なし)にしたものも送る
+    const toHankaku = (str) => {
+      const map = 'ァｧアｱィｨイｲゥｩウｳェｪエｴォｫオｵカｶガｶﾞキｷギｷﾞクｸグｸﾞケｹゲｹﾞコｺゴｺﾞサｻザｻﾞシｼジｼﾞスｽズｽﾞセｾゼｾﾞソｿゾｿﾞタﾀダﾀﾞチﾁヂﾁﾞッｯツﾂヅﾂﾞテﾃデﾃﾞトﾄドﾄﾞナﾅニﾆヌﾇネﾈノﾉハﾊバﾊﾞパﾊﾟヒﾋビﾋﾞピﾋﾟフﾌブﾌﾞプﾌﾟヘﾍベﾍﾞペﾍﾟホﾎボﾎﾞポﾎﾟマﾏミﾐムﾑメﾒモﾓャｬヤﾔュｭユﾕョｮヨﾖラﾗリﾘルﾙレﾚロﾛワﾜヲｦンﾝヴｳﾞーｰ';
+      const table = {};
+      for (let i = 0; i < map.length; ) {
+        const k = map[i++];
+        let v = map[i++];
+        if (map[i] === 'ﾞ' || map[i] === 'ﾟ') v += map[i++];
+        table[k] = v;
+      }
+      return String(str)
+        .replace(/[ぁ-ゖ]/g, (c) => String.fromCharCode(c.charCodeAt(0) + 0x60)) // ひらがな → カタカナ
+        .replace(/[\s　]/g, '')
+        .replace(/[ァ-ヴー]/g, (c) => table[c] || c);
+    };
     const data = {
       line_user_id: profile.userId,
       line_display_name: profile.displayName,
       patient_name: one($('name').value),
       patient_kana: one($('kana').value),
+      patient_kana_hankaku: toHankaku($('kana').value),
       birthday: $('birthday').value,
       phone: $('phone').value.replace(/[^0-9]/g, ''),
       policy_version: POLICY_VERSION,
