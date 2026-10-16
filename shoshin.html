@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>はじめての方のご予約 - いんなみ森田歯科</title>
+<script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN", sans-serif; background:#f3f8f7; margin:0; padding:20px 16px 40px; color:#222; }
+  h1 { font-size:19px; margin:0 0 4px; color:#1f5f57; }
+  .sub { font-size:13px; color:#2f9e8f; margin:0 0 16px; font-weight:bold; }
+  .steps { display:flex; gap:6px; margin:0 0 16px; }
+  .steps span { flex:1; text-align:center; font-size:12px; padding:6px 0; border-radius:14px; background:#dfeeec; color:#5b7c78; }
+  .steps span.on { background:#2f9e8f; color:#fff; font-weight:bold; }
+  .card { background:#fff; border-radius:12px; padding:16px; margin-bottom:14px; box-shadow:0 1px 3px rgba(0,0,0,.06); }
+  .card h2 { font-size:16px; margin:0 0 10px; color:#1f5f57; }
+  .policy { font-size:14px; line-height:1.7; margin:0; padding-left:1.2em; }
+  .policy li { margin-bottom:6px; }
+  label.f { display:block; font-size:14px; margin:14px 0 6px; font-weight:bold; }
+  label.f .req { color:#c0392b; font-size:12px; margin-left:4px; }
+  input[type=text], input[type=tel], input[type=date], select, textarea { width:100%; box-sizing:border-box; padding:11px; font-size:16px; border:1px solid #c8d6d4; border-radius:8px; background:#fff; }
+  textarea { min-height:80px; }
+  .row { display:flex; gap:8px; }
+  .row select { flex:1; }
+  .check { display:flex; align-items:flex-start; gap:10px; font-size:15px; margin:12px 0 0; line-height:1.5; }
+  .check input { width:22px; height:22px; margin-top:1px; flex:none; }
+  .chips { display:flex; flex-wrap:wrap; gap:8px; }
+  .chips label { font-size:14px; border:1px solid #c8d6d4; border-radius:18px; padding:7px 12px; background:#fff; }
+  .chips input { margin-right:4px; }
+  .note { font-size:12px; color:#666; margin:6px 0 0; line-height:1.6; }
+  button { width:100%; margin-top:18px; padding:14px; font-size:16px; font-weight:bold; color:#fff; background:#f39c4a; border:none; border-radius:10px; }
+  button.sec { background:#fff; color:#2f9e8f; border:1px solid #2f9e8f; margin-top:10px; }
+  button:disabled { opacity:.45; }
+  #status { margin-top:14px; font-size:14px; text-align:center; }
+  #status.error { color:#c0392b; }
+  .hide { display:none; }
+  .done { text-align:center; font-size:15px; line-height:1.8; }
+  .done b { color:#1f5f57; font-size:18px; }
+</style>
+</head>
+<body>
+  <h1>はじめての方のご予約</h1>
+  <p class="sub">いんなみ森田歯科</p>
+  <div class="steps"><span id="s1" class="on">1 ご確認</span><span id="s2">2 お客様情報</span><span id="s3">3 ご希望日時</span></div>
+
+  <!-- 1. キャンセルポリシーの同意 -->
+  <section id="step1">
+    <div class="card">
+      <h2>ご予約・キャンセルについて</h2>
+      <ul class="policy" id="policyList"></ul>
+      <label class="check"><input type="checkbox" id="agree"><span>上の内容を確認し、同意します</span></label>
+    </div>
+    <div class="card">
+      <h2>LINEでのお知らせ</h2>
+      <p class="policy" style="padding-left:0">ご予約日が近づいたら、このLINEでご予約のお知らせ（リマインド）をお送りします。</p>
+    </div>
+    <button id="next1" disabled>同意して次へ</button>
+  </section>
+
+  <!-- 2. お客様情報 -->
+  <section id="step2" class="hide">
+    <div class="card">
+      <label class="f" for="name">お名前（漢字）<span class="req">必須</span></label>
+      <input id="name" type="text" placeholder="例）新居浜 花子" autocomplete="name">
+      <label class="f" for="kana">ふりがな<span class="req">必須</span></label>
+      <input id="kana" type="text" placeholder="例）にいはま はなこ">
+      <label class="f" for="birthday">生年月日<span class="req">必須</span></label>
+      <input id="birthday" type="date" min="1900-01-01">
+      <label class="f" for="phone">電話番号<span class="req">必須</span></label>
+      <input id="phone" type="tel" placeholder="例）09012345678" autocomplete="tel">
+      <p class="note">ご家族の分をご予約の場合は、受診される方のお名前を入れてください。お一人ずつお申し込みください。</p>
+    </div>
+    <button id="next2">次へ</button>
+    <button id="back2" class="sec">戻る</button>
+  </section>
+
+  <!-- 3. ご希望日時 -->
+  <section id="step3" class="hide">
+    <div class="card">
+      <p class="note" style="margin-top:0">水曜・日曜・祝日は休診です。平日夕方（17時以降）と土曜日は、予約が埋まっていることが多いです。ご希望に添えない場合は、別の日時をご案内します。</p>
+      <label class="f">第1希望<span class="req">必須</span></label>
+      <div class="row"><select id="d1"></select><select id="t1"></select></div>
+      <label class="f">第2希望</label>
+      <div class="row"><select id="d2"></select><select id="t2"></select></div>
+      <label class="f">第3希望</label>
+      <div class="row"><select id="d3"></select><select id="t3"></select></div>
+    </div>
+    <div class="card">
+      <label class="f" style="margin-top:0">ご相談の内容<span class="req">必須</span></label>
+      <div class="chips" id="concerns"></div>
+      <label class="f" for="note">くわしい症状・ご要望（あれば）</label>
+      <textarea id="note" placeholder="例）右下の奥歯が冷たいものでしみる"></textarea>
+      <p class="note">保険証の写真などは、LINEで送らないでください。</p>
+    </div>
+    <button id="submit">この内容で申し込む</button>
+    <button id="back3" class="sec">戻る</button>
+  </section>
+
+  <section id="done" class="hide">
+    <div class="card done">
+      <b>お申し込みを受け付けました</b><br>
+      受付で予約表を確認し、<br>このLINEのトークでご予約日時をお知らせします。<br>
+      <span class="note">ご予約は、医院から日時をお知らせした時点で確定です。<br>お急ぎの方はお電話（0897-37-6480）でどうぞ。</span>
+    </div>
+    <button id="close" class="sec">閉じる</button>
+  </section>
+
+  <div id="status"></div>
+
+<script>
+  // ===== 設定 =====
+  const LIFF_ID = "2011083644-yBi6Gz7P"; // LINE Developers「初診予約」
+  const WEBHOOK_URL = "https://hook.us2.make.com/zj2levuicib66e1ugtzqmfm1g299vyjf"; // Make「LINE初診予約受信」
+  const POLICY_VERSION = "2026-10-16";
+  const POLICY = [
+    "ご予約の変更・キャンセルは、前日の診療時間内までに、お電話またはこのLINEでご連絡ください。",
+    "ご連絡のないキャンセルが続いた場合、次回からのご予約をお取りできないことがあります。",
+    "ご予約の時間に遅れる場合は、お電話でお知らせください。遅れた時間によっては、当日の治療内容を変更させていただくことがあります。",
+    "初めての方は、ご予約時間の10分前にお越しください。マイナ保険証または保険証、お薬手帳（お持ちの方）をお持ちください。",
+    "急な痛み・腫れのときや当日のご予約は、お電話（0897-37-6480）でお受けします。",
+  ];
+  const DAYS_AHEAD = 60;
+  const CLOSED_WEEKDAYS = [0, 3];  // 日・水
+  const CLOSED_DATES = [];         // 臨時休診日 '2026-12-29' の形で足す
+  const SLOTS_WEEKDAY = ["9:00～9:30","9:30～10:00","10:00～10:30","10:30～11:00","11:00～11:30","11:30～12:00","12:00～12:30","12:30～13:00","14:30～15:00","15:00～15:30","15:30～16:00","16:00～16:30","16:30～17:00","17:00～17:30","17:30～18:00","18:00～18:30"];
+  const SLOTS_SATURDAY = SLOTS_WEEKDAY.slice(0, 13); // 土曜は17時まで
+  const CONCERNS = ["痛み・しみる","詰め物・被せ物がとれた","歯ぐきの腫れ・出血","検診・クリーニング","入れ歯","矯正の相談","子どもの歯","その他"];
+
+  // ===== 祝日（振替休日・国民の休日を含む） =====
+  const pad = n => ('0' + n).slice(-2);
+  const ymd = d => d.getUTCFullYear() + '-' + pad(d.getUTCMonth() + 1) + '-' + pad(d.getUTCDate());
+  const holidayCache = {};
+  function holidaysOf(y) {
+    const day = (m, dd) => new Date(Date.UTC(y, m - 1, dd));
+    const nthMonday = (m, n) => { const f = day(m, 1); return day(m, 1 + ((8 - f.getUTCDay()) % 7) + (n - 1) * 7); };
+    const base = [day(1,1), nthMonday(1,2), day(2,11), day(2,23),
+      day(3, Math.floor(20.8431 + 0.242194 * (y - 1980) - Math.floor((y - 1980) / 4))),
+      day(4,29), day(5,3), day(5,4), day(5,5), nthMonday(7,3), day(8,11), nthMonday(9,3),
+      day(9, Math.floor(23.2488 + 0.242194 * (y - 1980) - Math.floor((y - 1980) / 4))),
+      nthMonday(10,2), day(11,3), day(11,23)];
+    const set = base.map(ymd);
+    const next = (d, n) => new Date(d.getTime() + n * 86400000);
+    base.forEach(d => { const mid = next(d, 1); if (set.includes(ymd(next(d, 2))) && !set.includes(ymd(mid)) && mid.getUTCDay() !== 0) set.push(ymd(mid)); });
+    base.forEach(d => { if (d.getUTCDay() !== 0) return; let s = next(d, 1); while (set.includes(ymd(s))) s = next(s, 1); set.push(ymd(s)); });
+    return set;
+  }
+  const isHoliday = d => { const y = d.getUTCFullYear(); return (holidayCache[y] = holidayCache[y] || holidaysOf(y)).includes(ymd(d)); };
+
+  function openDays() {
+    const now = new Date(Date.now() + 9 * 3600000); // 日本時間
+    const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    const out = [];
+    for (let i = 1; i <= DAYS_AHEAD; i++) {
+      const d = new Date(today.getTime() + i * 86400000);
+      if (CLOSED_WEEKDAYS.includes(d.getUTCDay()) || CLOSED_DATES.includes(ymd(d)) || isHoliday(d)) continue;
+      out.push(d);
+    }
+    return out;
+  }
+  const label = d => (d.getUTCMonth() + 1) + '月' + d.getUTCDate() + '日(' + '日月火水木金土'[d.getUTCDay()] + ')';
+
+  // ===== 画面 =====
+  const $ = id => document.getElementById(id);
+  const statusEl = $('status');
+  const setStatus = (msg, cls) => { statusEl.textContent = msg || ''; statusEl.className = cls || ''; };
+  function show(n) {
+    ['step1','step2','step3','done'].forEach(id => $(id).classList.add('hide'));
+    $(n === 4 ? 'done' : 'step' + n).classList.remove('hide');
+    [1,2,3].forEach(i => $('s' + i).classList.toggle('on', i === n));
+    setStatus('');
+    window.scrollTo(0, 0);
+  }
+
+  POLICY.forEach(t => { const li = document.createElement('li'); li.textContent = t; $('policyList').appendChild(li); });
+  $('agree').addEventListener('change', e => { $('next1').disabled = !e.target.checked; });
+  CONCERNS.forEach(c => { const l = document.createElement('label'); l.innerHTML = '<input type="checkbox" value="' + c + '">' + c; $('concerns').appendChild(l); });
+
+  const days = openDays();
+  [1,2,3].forEach(i => {
+    const ds = $('d' + i), ts = $('t' + i);
+    ds.innerHTML = '<option value="">' + (i === 1 ? '日付を選ぶ' : '（なし）') + '</option>' +
+      days.map(d => '<option value="' + ymd(d) + '" data-sat="' + (d.getUTCDay() === 6 ? 1 : 0) + '">' + label(d) + '</option>').join('');
+    const fillTimes = () => {
+      const opt = ds.options[ds.selectedIndex];
+      const slots = opt && opt.dataset.sat === '1' ? SLOTS_SATURDAY : SLOTS_WEEKDAY;
+      ts.innerHTML = '<option value="">時間</option><option value="何時でも">何時でも</option><option value="午前">午前</option><option value="午後">午後</option>' +
+        slots.map(s => '<option>' + s + '</option>').join('');
+    };
+    ds.addEventListener('change', fillTimes);
+    fillTimes();
+  });
+  const wish = i => {
+    const d = $('d' + i).value; if (!d) return '';
+    const t = $('t' + i).value || '何時でも';
+    return d + ' ' + t;
+  };
+  const wishLabel = i => {
+    const ds = $('d' + i); if (!ds.value) return '';
+    return ds.options[ds.selectedIndex].text + ' ' + ($('t' + i).value || '何時でも');
+  };
+
+  $('next1').addEventListener('click', () => show(2));
+  $('back2').addEventListener('click', () => show(1));
+  $('back3').addEventListener('click', () => show(2));
+  $('next2').addEventListener('click', () => {
+    const miss = [['name','お名前'],['kana','ふりがな'],['birthday','生年月日'],['phone','電話番号']].filter(([id]) => !$(id).value.trim());
+    if (miss.length) return setStatus(miss.map(m => m[1]).join('・') + 'を入れてください。', 'error');
+    if ($('phone').value.replace(/[^0-9]/g, '').length < 10) return setStatus('電話番号をご確認ください。', 'error');
+    show(3);
+  });
+  $('close').addEventListener('click', () => { if (liff.isInClient()) liff.closeWindow(); });
+
+  let profile = null;
+  async function init() {
+    try {
+      await liff.init({ liffId: LIFF_ID });
+      if (!liff.isLoggedIn()) { liff.login(); return; }
+      profile = await liff.getProfile();
+    } catch (e) {
+      setStatus('LINEアプリの中でこのページを開いてください。', 'error');
+      $('submit').disabled = true;
+    }
+  }
+  init();
+
+  $('submit').addEventListener('click', async () => {
+    const concern = [...document.querySelectorAll('#concerns input:checked')].map(c => c.value).join('、');
+    if (!$('d1').value) return setStatus('第1希望の日付を選んでください。', 'error');
+    if (!concern) return setStatus('ご相談の内容を1つ以上選んでください。', 'error');
+    if (!profile) return setStatus('LINEの情報を読み込めませんでした。LINEアプリの中で開き直してください。', 'error');
+
+    const btn = $('submit');
+    btn.disabled = true;
+    setStatus('送信しています…');
+    const one = s => String(s).replace(/[\r\n]+/g, ' ').trim();
+    const data = {
+      line_user_id: profile.userId,
+      line_display_name: profile.displayName,
+      patient_name: one($('name').value),
+      patient_kana: one($('kana').value),
+      birthday: $('birthday').value,
+      phone: $('phone').value.replace(/[^0-9]/g, ''),
+      policy_version: POLICY_VERSION,
+      policy_agreed_at: new Date().toISOString(),
+      remind: true, // リマインドは全員に送る（院長の方針 2026-10-16）
+      wish1: wish(1), wish2: wish(2), wish3: wish(3),
+      concern,
+      note: $('note').value.trim(),
+    };
+    try {
+      const res = await fetch(WEBHOOK_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+      if (!res.ok) throw new Error('送信失敗 ' + res.status);
+    } catch (e) {
+      btn.disabled = false;
+      return setStatus('送信できませんでした。通信状態をご確認のうえ、もう一度お試しください。', 'error');
+    }
+    // トークにも申し込み内容を残す（受付がトークで返信する）
+    const b = data.birthday.split('-');
+    const text = ['【初診予約の申し込み】',
+      'お名前：' + data.patient_name + '（' + data.patient_kana + '）',
+      '生年月日：' + b[0] + '年' + Number(b[1]) + '月' + Number(b[2]) + '日',
+      '電話番号：' + data.phone,
+      '第1希望：' + wishLabel(1),
+      wishLabel(2) ? '第2希望：' + wishLabel(2) : '',
+      wishLabel(3) ? '第3希望：' + wishLabel(3) : '',
+      'ご相談：' + concern + (data.note ? '\n' + data.note : '')].filter(Boolean).join('\n');
+    try { if (liff.isInClient()) await liff.sendMessages([{ type: 'text', text }]); } catch (e) { /* トークに出せなくても受付済み */ }
+    show(4);
+  });
+</script>
+</body>
+</html>
