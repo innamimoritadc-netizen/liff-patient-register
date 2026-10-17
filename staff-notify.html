@@ -27,6 +27,8 @@
       <input id="open_date" name="open_date" type="date" required>
       <label for="open_time">時間</label>
       <input id="open_time" name="open_time" type="time" required>
+      <label for="passcode">スタッフの合言葉</label>
+      <input id="passcode" name="passcode" type="password" autocomplete="off" required>
       <button id="submitBtn" type="submit">この内容で通知を送信する</button>
     </form>
     <div id="status"></div>
@@ -47,6 +49,7 @@
     e.preventDefault();
     const open_date = document.getElementById('open_date').value;
     const open_time = document.getElementById('open_time').value;
+    const passcode = document.getElementById('passcode').value.trim();
 
     if (!confirm(open_date + ' を希望している患者さん全員に\n' + open_date + ' ' + open_time + ' の空きをLINE通知します。よろしいですか？')) {
       return;
@@ -58,9 +61,10 @@
       const res = await fetch(WEBHOOK_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ open_date, open_time })
+        body: JSON.stringify({ open_date, open_time, passcode })
       });
 
+      if (res.status === 403) { setStatus('合言葉が違います。', 'error'); return; }
       if (!res.ok) throw new Error('送信失敗');
       setStatus('送信しました。', 'ok');
       document.getElementById('form').reset();
