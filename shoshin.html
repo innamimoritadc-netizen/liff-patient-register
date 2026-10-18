@@ -45,6 +45,11 @@
 
   <!-- 1. キャンセルポリシーの同意 -->
   <section id="step1">
+    <div class="card friend-ask hide" style="border:2px solid #06c755">
+      <b>先に当院のLINEを友だち追加してください</b>
+      <p class="note" style="margin:6px 0 10px">ご予約日時のご連絡は、このLINE公式アカウントのトークでお送りします。友だち追加がないと、医院からのご連絡が届きません。</p>
+      <a href="https://line.me/R/ti/p/@807gnyxe" style="display:block;text-align:center;padding:12px;background:#06c755;color:#fff;border-radius:10px;font-weight:bold;text-decoration:none">友だち追加する</a>
+    </div>
     <div class="card">
       <h2>ご予約・キャンセルについて</h2>
       <ul class="policy" id="policyList"></ul>
@@ -108,6 +113,11 @@
       <b>お申し込みを受け付けました</b><br>
       受付で予約表を確認し、<br>このLINEのトークでご予約日時をお知らせします。<br>
       <span class="note">医院からLINEで日時をご案内します。その日時でよろしければ「了解」とご返信ください。ご返信をいただいた時点でご予約確定となります。<br>お急ぎの方はお電話（0897-37-6480）でどうぞ。</span>
+    </div>
+    <div class="card friend-ask hide" style="border:2px solid #06c755">
+      <b>先に当院のLINEを友だち追加してください</b>
+      <p class="note" style="margin:6px 0 10px">ご予約日時のご連絡は、このLINE公式アカウントのトークでお送りします。友だち追加がないと、医院からのご連絡が届きません。</p>
+      <a href="https://line.me/R/ti/p/@807gnyxe" style="display:block;text-align:center;padding:12px;background:#06c755;color:#fff;border-radius:10px;font-weight:bold;text-decoration:none">友だち追加する</a>
     </div>
     <button id="close" class="sec">閉じる</button>
   </section>
@@ -223,6 +233,10 @@
       await liff.init({ liffId: LIFF_ID });
       if (!liff.isLoggedIn()) { liff.login(); return; }
       profile = await liff.getProfile();
+      try {
+        const fr = await liff.getFriendship();
+        if (!fr.friendFlag) document.querySelectorAll('.friend-ask').forEach(el => el.classList.remove('hide'));
+      } catch (e) { /* 友だちかどうか分からないときは出さない */ }
     } catch (e) {
       setStatus('LINEアプリの中でこのページを開いてください。', 'error');
       $('submit').disabled = true;
