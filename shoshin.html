@@ -43,13 +43,18 @@
   <p class="sub">いんなみ森田歯科</p>
   <div class="steps"><span id="s1" class="on">1 ご確認</span><span id="s2">2 お客様情報</span><span id="s3">3 ご希望日時</span></div>
 
+  <!-- 0. 友だち追加（必須） -->
+  <section id="gate" class="hide">
+    <div class="card" style="border:2px solid #06c755">
+      <h2>はじめに当院のLINEを友だち追加してください</h2>
+      <p class="note" style="margin:6px 0 12px">ご予約日時のご連絡は、このLINE公式アカウントのトークでお送りします。友だち追加をしていただくと、お申し込みに進めます。</p>
+      <a href="https://line.me/R/ti/p/@807gnyxe" style="display:block;text-align:center;padding:14px;background:#06c755;color:#fff;border-radius:10px;font-weight:bold;text-decoration:none">友だち追加する</a>
+    </div>
+    <button id="recheck">友だち追加しました（次へ）</button>
+  </section>
+
   <!-- 1. キャンセルポリシーの同意 -->
   <section id="step1">
-    <div class="card friend-ask hide" style="border:2px solid #06c755">
-      <b>先に当院のLINEを友だち追加してください</b>
-      <p class="note" style="margin:6px 0 10px">ご予約日時のご連絡は、このLINE公式アカウントのトークでお送りします。友だち追加がないと、医院からのご連絡が届きません。</p>
-      <a href="https://line.me/R/ti/p/@807gnyxe" style="display:block;text-align:center;padding:12px;background:#06c755;color:#fff;border-radius:10px;font-weight:bold;text-decoration:none">友だち追加する</a>
-    </div>
     <div class="card">
       <h2>ご予約・キャンセルについて</h2>
       <ul class="policy" id="policyList"></ul>
@@ -113,11 +118,6 @@
       <b>お申し込みを受け付けました</b><br>
       受付で予約表を確認し、<br>このLINEのトークでご予約日時をお知らせします。<br>
       <span class="note">医院からLINEで日時をご案内します。その日時でよろしければ「了解」とご返信ください。ご返信をいただいた時点でご予約確定となります。<br>お急ぎの方はお電話（0897-37-6480）でどうぞ。</span>
-    </div>
-    <div class="card friend-ask hide" style="border:2px solid #06c755">
-      <b>先に当院のLINEを友だち追加してください</b>
-      <p class="note" style="margin:6px 0 10px">ご予約日時のご連絡は、このLINE公式アカウントのトークでお送りします。友だち追加がないと、医院からのご連絡が届きません。</p>
-      <a href="https://line.me/R/ti/p/@807gnyxe" style="display:block;text-align:center;padding:12px;background:#06c755;color:#fff;border-radius:10px;font-weight:bold;text-decoration:none">友だち追加する</a>
     </div>
     <button id="close" class="sec">閉じる</button>
   </section>
@@ -228,15 +228,31 @@
   $('close').addEventListener('click', () => { if (liff.isInClient()) liff.closeWindow(); });
 
   let profile = null;
+  let notFriend = false;
+  // 友だちでない人は申し込みに進めない（確認できないときは止めない）
+  async function checkFriend(manual) {
+    let ok = true;
+    try { ok = (await liff.getFriendship()).friendFlag; } catch (e) { ok = true; }
+    notFriend = !ok;
+    if (notFriend) {
+      ['step1','step2','step3','done'].forEach(id => $(id).classList.add('hide'));
+      $('gate').classList.remove('hide');
+      if (manual) setStatus('まだ友だち追加が確認できません。「友だち追加する」を押して追加してください。', 'error');
+    } else if (!$('gate').classList.contains('hide')) {
+      $('gate').classList.add('hide');
+      setStatus('');
+      show(1);
+    }
+    return ok;
+  }
+  $('recheck').addEventListener('click', () => checkFriend(true));
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && notFriend) checkFriend(false); });
   async function init() {
     try {
       await liff.init({ liffId: LIFF_ID });
       if (!liff.isLoggedIn()) { liff.login(); return; }
       profile = await liff.getProfile();
-      try {
-        const fr = await liff.getFriendship();
-        if (!fr.friendFlag) document.querySelectorAll('.friend-ask').forEach(el => el.classList.remove('hide'));
-      } catch (e) { /* 友だちかどうか分からないときは出さない */ }
+      await checkFriend(false);
     } catch (e) {
       setStatus('LINEアプリの中でこのページを開いてください。', 'error');
       $('submit').disabled = true;
@@ -245,6 +261,7 @@
   init();
 
   $('submit').addEventListener('click', async () => {
+    if (notFriend) { await checkFriend(true); if (notFriend) return; }
     const concern = [...document.querySelectorAll('#concerns input:checked')].map(c => c.value).join('、');
     if (!$('d1').value) return setStatus('第1希望の日付を選んでください。', 'error');
     if (!concern) return setStatus('ご相談の内容を1つ以上選んでください。', 'error');
