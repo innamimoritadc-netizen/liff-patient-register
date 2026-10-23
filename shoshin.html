@@ -31,6 +31,8 @@
   button { width:100%; margin-top:18px; padding:14px; font-size:16px; font-weight:bold; color:#fff; background:#f39c4a; border:none; border-radius:10px; }
   button.sec { background:#fff; color:#2f9e8f; border:1px solid #2f9e8f; margin-top:10px; }
   button:disabled { opacity:.45; }
+  button.line { background:#06c755; }
+  #talkBox { border:2px solid #06c755; }
   #status { margin-top:14px; font-size:14px; text-align:center; }
   #status.error { color:#c0392b; }
   .hide { display:none; }
@@ -120,6 +122,12 @@
       受付で予約表を確認し、<br>このLINEのトークでご予約日時をお知らせします。<br>
       <span class="note">医院からLINEで日時をご案内します。その日時でよろしければ「了解」とご返信ください。ご返信をいただいた時点でご予約確定となります。<br>お急ぎの方はお電話（0897-37-6480）でどうぞ。</span>
     </div>
+    <!-- トーク画面以外から開いた人は、申し込み内容がトークに残らないので、ボタンで送ってもらう(2026-10-24) -->
+    <div id="talkBox" class="card hide">
+      <b>あと1つだけお願いします</b><br>
+      下のボタンを押すと、医院とのトーク画面が開き、申し込み内容が入った状態になります。そのまま<b>送信</b>を押してください。
+      <a id="talkBtn" href="#"><button type="button" class="line">💬 申し込み内容をトークで送る</button></a>
+    </div>
     <button id="close" class="sec">閉じる</button>
   </section>
 
@@ -130,6 +138,7 @@
   const LIFF_ID = "2011083644-yBi6Gz7P"; // LINE Developers「初診予約」
   const WEBHOOK_URL = "https://hook.us2.make.com/zj2levuicib66e1ugtzqmfm1g299vyjf"; // Make「LINE初診予約受信」
   const POLICY_VERSION = "2026-10-16";
+  const OA_ID = "@807gnyxe"; // 医院のLINE公式アカウント(申し込み内容をトークで送ってもらうとき)
   const POLICY = [
     "ご予約の変更・キャンセルは、前日の診療時間内までに、お電話またはこのLINEでご連絡ください。",
     "ご連絡のないキャンセルが続いた場合、次回からのご予約をお取りできないことがあります。",
@@ -346,7 +355,13 @@
       wishLabel(2) ? '第2希望：' + wishLabel(2) : '',
       wishLabel(3) ? '第3希望：' + wishLabel(3) : '',
       'ご相談：' + concern + (data.note ? '\n' + data.note : '')].filter(Boolean).join('\n');
-    try { if (liff.isInClient()) await liff.sendMessages([{ type: 'text', text }]); } catch (e) { /* トークに出せなくても受付済み */ }
+    // トーク画面から開いたときだけ本人の発言として送れる。送れなかったら、トークを開いて送ってもらうボタンを出す
+    let sent = false;
+    try { if (liff.isInClient()) { await liff.sendMessages([{ type: 'text', text }]); sent = true; } } catch (e) { /* トークに出せなくても受付済み */ }
+    if (!sent) {
+      $('talkBtn').href = 'https://line.me/R/oaMessage/' + encodeURIComponent(OA_ID) + '/?' + encodeURIComponent(text);
+      $('talkBox').classList.remove('hide');
+    }
     show(4);
   });
 </script>
