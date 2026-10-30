@@ -118,14 +118,14 @@
 
   <section id="done" class="hide">
     <div class="card done">
-      <b>お申し込みを受け付けました</b><br>
-      受付で予約表を確認し、<br>このLINEのトークでご予約日時をお知らせします。<br>
+      <b id="doneTitle">お申し込みを受け付けました</b><br>
+      <span id="doneBody">受付で予約表を確認し、<br>このLINEのトークでご予約日時をお知らせします。</span><br>
       <span class="note">医院からLINEで日時をご案内します。その日時でよろしければ「了解」とご返信ください。ご返信をいただいた時点でご予約確定となります。<br>お急ぎの方はお電話（0897-37-6480）でどうぞ。</span>
     </div>
     <!-- トーク画面以外から開いた人は、申し込み内容がトークに残らないので、ボタンで送ってもらう(2026-10-24) -->
     <div id="talkBox" class="card hide">
-      <b>あと1つだけお願いします（まだ完了していません）</b><br>
-      まもなく医院とのトーク画面が開き、申し込み内容が入った状態になります。そのまま<b>送信</b>を押してください。<b>送信していただかないと、医院からご連絡できないことがあります。</b><br>
+      <b>まだ受付は完了していません</b><br>
+      まもなく医院とのトーク画面が開き、申し込み内容が入った状態になります。そのまま<b>送信</b>を押してください。<b>トークで送信した時点で受付となります。</b>送信しないと、お申し込みは医院に届きません。<br>
       開かないときは、下のボタンを押してください。
       <a id="talkBtn" href="#"><button type="button" class="line">💬 申し込み内容をトークで送る</button></a>
     </div>
@@ -335,6 +335,7 @@
       policy_version: POLICY_VERSION,
       policy_agreed_at: new Date().toISOString(),
       remind: true, // リマインドは全員に送る（院長の方針 2026-10-16）
+      stage: 'pending', // 仮受付。トークで申し込み内容を送ったら本受付(Make 6147829→6653371, 2026-10-30)
       wish1: wish(1), wish2: wish(2), wish3: wish(3),
       concern,
       note: $('note').value.trim(),
@@ -357,11 +358,14 @@
       wishLabel(3) ? '第3希望：' + wishLabel(3) : '',
       'ご相談：' + concern + (data.note ? '\n' + data.note : '')].filter(Boolean).join('\n');
     // トーク画面から開いたときだけ本人の発言として送れる。送れなかったら、トークを開いて送ってもらうボタンを出す
+    // トークで送った時点で本受付になるので、送れなかった人には「まだ完了していません」と出す
     let sent = false;
-    try { if (liff.isInClient()) { await liff.sendMessages([{ type: 'text', text }]); sent = true; } } catch (e) { /* トークに出せなくても受付済み */ }
+    try { if (liff.isInClient()) { await liff.sendMessages([{ type: 'text', text }]); sent = true; } } catch (e) { /* 送れなければ下のボタンで送ってもらう */ }
     if (!sent) {
       $('talkBtn').href = 'https://line.me/R/oaMessage/' + encodeURIComponent(OA_ID) + '/?' + encodeURIComponent(text);
       $('talkBox').classList.remove('hide');
+      $('doneTitle').textContent = 'お申し込み内容をお預かりしました';
+      $('doneBody').textContent = '下の案内にそって、トークで送信をお願いします。';
     }
     show(4);
     // ボタンを押さない人が多いので、2秒後に自動でトークを開く(2026-10-26)。開かなかったときのためにボタンも残す
