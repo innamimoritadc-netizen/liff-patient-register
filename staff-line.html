@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>LINEで連絡 - 森田歯科</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "BIZ UDPGothic", "Yu Gothic", "Meiryo", sans-serif; background: #e9f5f3; color: #1f3d39; }
+  main { max-width: 640px; margin: 0 auto; padding: 20px 16px 40px; }
+  h1 { font-size: 20px; color: #1f5f57; margin: 0 0 4px; }
+  .who { font-size: 18px; font-weight: bold; margin: 12px 0; }
+  .card { background: #fff; border-radius: 12px; padding: 16px; box-shadow: 0 2px 0 #c9e6e1; }
+  textarea { width: 100%; min-height: 240px; font-size: 16px; line-height: 1.6; padding: 10px; border: 1px solid #9fd3ca; border-radius: 8px; font-family: inherit; }
+  button { width: 100%; margin-top: 14px; padding: 14px; font-size: 17px; font-weight: bold; color: #fff; background: #06c755; border: none; border-radius: 10px; cursor: pointer; }
+  button:disabled { opacity: .45; cursor: default; }
+  .note { font-size: 13px; color: #4f6f6a; line-height: 1.6; margin-top: 10px; }
+  #status { margin-top: 14px; font-size: 15px; font-weight: bold; }
+  .ok { color: #06a047; } .err { color: #c0392b; }
+</style>
+</head>
+<body>
+<main>
+  <h1>💬 LINE初診予約の方へ連絡</h1>
+  <div class="note">チャットに出てこない方へ、医院のLINEからメッセージを送ります。</div>
+  <div class="who" id="who"></div>
+  <div class="card">
+    <textarea id="text"></textarea>
+    <button id="send">この内容でLINEを送る</button>
+    <div id="status"></div>
+    <div class="note">
+      ・送ったメッセージは公式アカウントのチャットには出ません。控えがメール（【LINE送信の控え】）に届きます。<br>
+      ・患者さんが返信すると、その方がチャットに出てくるので、そのあとはチャットでやり取りしてください。<br>
+      ・このページのリンクはこの方専用です。ほかの方には使えません。
+    </div>
+  </div>
+</main>
+<script>
+  // メール【LINE初診予約】のリンクから開く。#u=LINEの宛先&k=鍵&n=お名前(# の後ろはサーバーに送られない)
+  const SEND_URL = 'https://hook.us2.make.com/2sk2acvwtetc2sxcjbn76yae8m9dif90'; // Make「LINE初診_医院から送信」6836179
+  const p = new URLSearchParams(location.hash.slice(1));
+  const to = p.get('u') || '', k = p.get('k') || '', name = p.get('n') || '';
+  const $ = (id) => document.getElementById(id);
+  if (!to || !k) {
+    $('who').textContent = 'リンクが正しくありません。メールのリンクから開いてください。';
+    $('send').disabled = true;
+  } else {
+    $('who').textContent = (name || '（お名前なし）') + ' 様';
+    $('text').value = (name ? name + ' 様\n\n' : '') +
+      'いんなみ森田歯科です。初診のご予約のお申し込みをありがとうございました。\n\n' +
+      '○月○日（○）○時○分からでいかがでしょうか。\n' +
+      'その日時でよろしければ「了解」とご返信ください。ご返信をいただいた時点でご予約確定となります。\n' +
+      'ご都合が合わない場合は、ご希望の日時をお知らせください。\n\n' +
+      'いんなみ森田歯科';
+  }
+  $('send').addEventListener('click', async () => {
+    const text = $('text').value.trim();
+    if (!text) return;
+    if (/○/.test(text) && !confirm('「○」が残っています。このまま送りますか？')) return;
+    if (!confirm((name || 'この方') + ' 様にLINEを送ります。よろしいですか？')) return;
+    $('send').disabled = true;
+    $('status').className = ''; $('status').textContent = '送っています…';
+    try {
+      const res = await fetch(SEND_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ to, k, name, text }) });
+      if (res.status === 403) throw new Error('リンクが正しくありません');
+      if (!res.ok) throw new Error('送れませんでした（' + res.status + '）');
+      $('status').className = 'ok'; $('status').textContent = '✓ 送りました。控えがメールに届きます。';
+    } catch (e) {
+      $('status').className = 'err'; $('status').textContent = e.message + '。もう一度お試しいただくか、お電話でご連絡ください。';
+      $('send').disabled = false;
+    }
+  });
+</script>
+</body>
+</html>
